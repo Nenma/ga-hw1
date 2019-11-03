@@ -1,0 +1,345 @@
+\documentclass{article}
+
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usepackage{multirow}
+\usepackage{lipsum}
+\pgfplotsset{compat=1.16}
+
+
+\author{Roșu Cristian-Mihai}
+\title{HW1 Report}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+In computer science, artificial intelligence, and mathematical optimization, a heuristic is a technique designed for solving a problem more quickly when classic methods are too slow, or for finding an approximate solution when classic methods fail to find any exact solution. This is achieved by trading optimality, completeness, accuracy, or precision for speed. In a way, it can be considered a shortcut.
+
+In this work, I explore this definition thoroughly by using two heuristic search algorithms to calculate the global minima of four distinct functions.
+\end{abstract}
+
+\section{Introduction}
+This work aims to explore what a heuristic actually represents by addressing the problem of finding the global minimum of a function.
+
+Here, I use \textit{Rastrigin}'s, \textit{De Jong}'s, \textit{Schwefel}'s and \textit{Michalewicz}'s functions as benchmarks to test two different heuristic search algorithms, \textbf{Iterated Hillclimbing} and \textbf{Simulated Annealing}. Below are the functions \cite{functions}, in order:
+$$ f(x) = A \cdot n + \sum_{i=1}^n \left[ x_i^2 - A \cdot cos(2 \pi x_i) \right], A = 10, x_i \in \left[ -5.12, 5.15 \right] $$
+$$ f(x) = \sum_{i=1}^n {x_i}^2, x_i \in \left[ -5.12, 5.12 \right] $$
+$$ f(x) = \sum_{i=1}^n -x_i \cdot \sin(\sqrt{|x_i|}), x_i \in \left[ -500, 500 \right] $$
+$$ f(x) = - \sum_{i=1}^n \left[ \sin(x_i^2) \cdot \sin(\frac{i{x_i}^2}{\pi})^{2m} \right], m = 10, x_i \in \left[ 0, \pi \right] $$
+Being multidimensional, each of the functions will be tested on 5, 10 and 30 dimensions, and for every test I will be recording the \textsl{minimum}, \textsl{maximum} and \textsl{average} \textbf{values} found, as well as the \textsl{minimum}, \textsl{maximum} and \textsl{average} \textbf{time} it took to obtain those results.
+
+\subsection{Motivation} 
+The purpose of this work is to explore the capabilities of a heuristic.
+
+In that sense, the problem of finding a function's global minimum has been chosen due to its ease of implementation and of understanding on a theoretical level.
+And as for the algorithms chosen, Iterated Hillclimbing and Simulated Annealing are the cornerstones of what genetics represents in computer science, on top of being equally easy to understand and implement.
+
+The benchmark functions have been chosen such that the experiment may include as much variety as possible, since the domain and global minimum of each of them are very distinct.
+
+\section{Method}
+The algorithms used to calculate the global minima of the benchmark functions are \textbf{Iterated Hillclimbing} and \textbf{Simulated Annealing}.
+\vspace{5mm}
+
+They have been implemented as functions which take as parameters the function they are testing along with its domain and dimension. The solutions they produce are represented using bitstrings whose size are calculated in relation to the parameters using the following formula:
+
+\vspace{3mm}
+\texttt{size=ceil(log2((upper-lower)*pow(10,PRECISION)))*dim}
+\vspace{3mm}
+
+where \texttt{lower} and \texttt{upper} are the domain's ends and \texttt{dim} is the dimension on which the function is tested.
+\texttt{PRECISION} is a global variable used to decide how accurate the representation should be. In this work, I decided to change its value depending on the dimension that is being tested to achieve satisfactory run times:
+a precision of $10^3$ for 5 dimensions, $10^2$ for 10 dimensions and $10^1$ for 30 dimensions.
+
+Both algorithms also use the notion of \textsl{neighbour}. A neighbourhood is composed of every alternate bitstring resulted from negating one bit of the original.
+
+To reach their solution, the algorithms \textsl{evaluate} an original bitstring and its neighbours and then decide which is \textsl{better} in order to progress, meaning whose function value is smallest.
+
+Evaluating the bitstring is done by scaling each of its components (delimitated by size and dimension) to the function's domain and converting it to a real number, according to the following formula:
+
+\vspace{3mm}
+\texttt{realnr=lower+decimal(component)*(upper-lower)/(pow(2, size)-1)}
+\vspace{3mm}
+
+where \texttt{decimal()} is a function that converts a bitstring into an integer.
+
+\vspace{5mm}
+Below are the details for each of the algorithms \cite{pmihaela}:
+
+\newpage
+
+\textsc{Iterated Hillclimbing}
+
+\texttt{begin}
+
+\texttt{t := 0}
+
+\texttt{initialize best}
+
+\texttt{repeat}
+
+\quad \quad \texttt{local := FALSE}
+
+\quad \quad \texttt{select a candidate solution (bitstring) vc at random}
+
+\quad \quad\texttt{evaluate vc}
+
+\quad \quad\texttt{repeat}
+
+\quad \quad \quad \quad \texttt{vn := Improve(Neighborhood(vc))}
+
+\quad \quad \quad \quad \texttt{if eval(vn) is better than eval(vc)}
+
+\quad \quad \quad \quad \quad \quad \texttt{then vc := vn}
+
+\quad \quad \quad \quad \texttt{else local := TRUE}
+
+\quad \quad \texttt{until local}
+
+\quad \quad \texttt{t := t + 1}
+
+\quad \quad \texttt{if vc is better than best}
+
+\quad \quad \quad \quad \texttt{then best := vc}
+
+\texttt{until t = MAX}
+
+\texttt{end}
+
+\vspace{5mm}
+
+Apart from the usual ones, the function this algorithm has been implemented into also takes an improvement method as one of the parameters.
+
+A random bistring is generated as candidate solution. After that, another candidate solution is selected among the first's neighborhood according to the improvement method.
+
+There are two ways of choosing which is the next candidate:
+\begin{enumerate}
+\item The first neighbour encountered whose evaluation is better than the original's - \textit{First Improvement}
+\item The neighbour whose evaluation is the best out of all the other ones - \textit{Best Improvement}
+\end{enumerate}
+
+If this next candidate's evaluation is better than the original's, the variable containing the original takes the candidate's value and the process repeats itself until that is no longer true.
+In the end, we are left with the \textsl{global minimum}.
+
+\newpage
+
+\textsc{Simulated Annealing}
+
+\texttt{begin}
+
+\texttt{t := 0}
+
+\texttt{initialize the temperature T}
+
+\texttt{select a current candidate solution (bitstring) vc at random}
+
+\texttt{evaluate vc}
+
+\texttt{repeat}
+
+\quad \quad \texttt{repeat}
+
+\quad \quad \quad \quad \texttt{select at random vn - a neighbor of vc}
+
+\quad \quad \quad \quad \texttt{if eval(vn) is better than eval(vc)}
+        
+\quad \quad \quad \quad \quad \quad \texttt{then vc := vn}
+        
+\quad \quad \quad \quad \texttt{else if random[0,1) < exp(-|eval(vn)-eval(vc)|/T)}
+
+\quad \quad \quad \quad \quad \quad \texttt{then vc := vn}
+
+\quad \quad \texttt{until (termination-condition)}
+    
+\quad \quad \texttt{T := g(T; t)} 
+    
+\quad \quad \texttt{t := t + 1}
+  
+\texttt{until t = MAX}
+
+\texttt{end}
+
+\vspace{5mm}
+
+Similarly to Hillclimbing, first we generate a random bitstring as a candidate solution. After that, however, the next candidate is randomly chosen from the original's neighbourhood, instead of following a certain rule.
+
+If this next candidate's evaluation is better than the original's, the variable containing the original takes the candidate's value, and if that is not true then there is a very small chance that the swap happens anyway.
+That probability is calculated as shown in the pseudocode above.
+
+The \texttt{termination-condition} that I chose depends on the \texttt{temperature}. Being initialized at 1000, it is slowly reduced after every iteration using the function \texttt{g(T; t)}, which I opted to simply be \texttt{T=T*0.9}.
+Once it reaches a value lower than 1, the algorithm is terminated and we are left with the \textsl{global minimum}.
+
+\vspace{5mm}
+As observed, each algorithm is run until a certain number \texttt{MAX} is reached.
+Due to their probabilistic nature, both of them need to be run several times in order to obtain consistent results which can be compared to our expectations.
+In this work, I opted for the minimum number of \textbf{30} tests.
+
+\newpage
+
+\section{Experiment}
+The experiment consists in running both Iterated Hillclimbing and Simulated Annealing through each of the benchmark functions on 5, 10 and 30 dimensions, over 30 iterations, in order to get a sample big enough 
+to compare them by looking at the minimum, maximum and average values produced, and the minimum, maximum and average times it took to reach those values. 
+
+In the case of Hillclimbing, I consider two variations of the algorithm determined by the improvement method (first and best improvement).
+
+The code for this can be found on Github \cite{github}.
+\section{Results}
+Below are 4 tables corresponding to each of the 4 functions that hold the results to the experiment: Rastrigin, De Jong, Schwefel and Michalewicz, in that order.
+
+\vspace{5mm}
+
+\begin{figure}[!h]
+  %\begin{table}[]
+    \begin{tabular}{|l|l|l|l|l|}
+    \hline
+    \multicolumn{1}{|c|}{Method} & \multicolumn{1}{c|}{Dimension n} & \multicolumn{1}{c|}{5} & \multicolumn{1}{c|}{10} & \multicolumn{1}{c|}{30} \\ \hline
+    \multirow{6}{*}{\begin{tabular}[c]{@{}l@{}}Iterated Hillclimbing\\ Best improvement\end{tabular}} & Min & 0.995071 & 8.28659 & 48.0815 \\ \cline{2-5} 
+     & Max & 19.9291 & 29.7096 & 101.606 \\ \cline{2-5} 
+     & Average & 9.234 & 19.7144 & 75.7797 \\ \cline{2-5} 
+     & Min time & 2554ms & 6221ms & 48168ms \\ \cline{2-5} 
+     & Max time & 4666ms & 11067ms & 72440ms \\ \cline{2-5} 
+     & Average time & 3623ms & 8725ms & 59518ms \\ \hline
+    \multirow{6}{*}{\begin{tabular}[c]{@{}l@{}}Iterated Hillclimbing\\ First improvement\end{tabular}} & Min & 5.21921 & 12.8861 & 66.9285 \\ \cline{2-5} 
+     & Max & 25.1373 & 39.4802 & 137.74 \\ \cline{2-5} 
+     & Average & 12.2246 & 23.7794 & 93.6836 \\ \cline{2-5} 
+     & Min time & 1400ms & 4010ms & 41126ms \\ \cline{2-5} 
+     & Max time & 3532ms & 7724ms & 72195ms \\ \cline{2-5} 
+     & Average time & 2313ms & 6045ms & 52207ms \\ \hline
+    \multirow{6}{*}{Simulated Annealing} & Min & 112.013 & 188.201 & 554.406 \\ \cline{2-5} 
+     & Max & 172.538 & 311.735 & 792.406 \\ \cline{2-5} 
+     & Average & 142.2785 & 262.306 & 693.281 \\ \cline{2-5} 
+     & Min time & 105ms & 145ms & 310ms \\ \cline{2-5} 
+     & Max time & 133ms & 187ms & 387ms \\ \cline{2-5} 
+     & Average time & 120ms & 174ms & 350ms \\ \hline
+    \end{tabular}
+  %\end{table}
+  \caption{Ratrigin's function results}
+\end{figure}
+
+\begin{figure}[!h]
+  %\begin{table}[]
+    \begin{tabular}{|l|l|l|l|l|}
+    \hline
+    \multicolumn{1}{|c|}{Method} & \multicolumn{1}{c|}{Dimension n} & \multicolumn{1}{c|}{5} & \multicolumn{1}{c|}{10} & \multicolumn{1}{c|}{30} \\ \hline
+    \multirow{6}{*}{\begin{tabular}[c]{@{}l@{}}Iterated Hillclimbing\\ Best improvement\end{tabular}} & Min & 0 & 0.000250489 & 0.0487589 \\ \cline{2-5} 
+     & Max & 0 & 0.000250489 & 0.0487589 \\ \cline{2-5} 
+     & Average & 0 & 0.000250489 & 0.0487589 \\ \cline{2-5} 
+     & Min time & 4069ms & 12846ms & 109112ms \\ \cline{2-5} 
+     & Max time & 6241ms & 18467ms & 144269ms \\ \cline{2-5} 
+     & Average time & 5187ms & 15210ms & 125895ms \\ \hline
+    \multirow{6}{*}{\begin{tabular}[c]{@{}l@{}}Iterated Hillclimbing\\ First improvement\end{tabular}} & Min & 0 & 0.000250489 & 0.0487589 \\ \cline{2-5} 
+     & Max & 0 & 0.000250489 & 0.0487589 \\ \cline{2-5}
+     & Average & 0 & 0.000250489 & 0.0487589 \\ \cline{2-5}
+     & Min time & 1549ms & 6868ms & 53938ms \\ \cline{2-5}
+     & Max time & 4038ms & 10086ms & 89449ms \\ \cline{2-5}
+     & Average time & 28662ms & 8411ms & 70592ms \\ \hline
+    \multirow{6}{*}{Simulated Annealing} & Min & 41.0977 & 96.2099 & 253.647 \\ \cline{2-5} 
+     & Max & 105.117 & 198.859 & 427.112 \\ \cline{2-5} 
+     & Average & 80.5765 & 136.814 & 350.287 \\ \cline{2-5} 
+     & Min time & 108ms & 152ms & 314ms \\ \cline{2-5} 
+     & Max time & 128ms & 189ms & 430ms \\ \cline{2-5} 
+     & Average time & 112ms & 172ms & 370ms \\ \hline
+    \end{tabular}
+  %\end{table}
+  \caption{De Jong's function results}
+\end{figure}
+
+\begin{figure}[!h]
+  %\begin{table}[]
+    \begin{tabular}{|l|l|l|l|l|}
+    \hline
+    \multicolumn{1}{|c|}{Method} & \multicolumn{1}{c|}{Dimension n} & \multicolumn{1}{c|}{5} & \multicolumn{1}{c|}{10} & \multicolumn{1}{c|}{30} \\ \hline
+    \multirow{6}{*}{\begin{tabular}[c]{@{}l@{}}Iterated Hillclimbing\\ Best improvement\end{tabular}} & Min & -2026.33 & -3917.88 & - \\ \cline{2-5} 
+     & Max & 0 & 0 & - \\ \cline{2-5} 
+     & Average & -1691.67 & -3340.8 & (aprox.) -10000 \\ \cline{2-5} 
+     & Min time & 10776ms & 51035ms & - \\ \cline{2-5} 
+     & Max time & 15711ms & 75839ms & - \\ \cline{2-5} 
+     & Average time & 13532ms & 63567ms & (aprox.) 15min \\ \hline
+    \multirow{6}{*}{\begin{tabular}[c]{@{}l@{}}Iterated Hillclimbing\\ First improvement\end{tabular}} & Min & -1792.17 & -3741.59 & - \\ \cline{2-5} 
+     & Max & 0 & 0 & - \\ \cline{2-5} 
+     & Average & -1536.16 & -3186.17 & (aprox.) -10000 \\ \cline{2-5} 
+     & Min time & 5786ms & 29066ms & - \\ \cline{2-5} 
+     & Max time & 11261ms & 50673ms & - \\ \cline{2-5} 
+     & Average time & 8434ms & 38260ms & (aprox.) 15min \\ \hline
+    \multirow{6}{*}{Simulated Annealing} & Min & -136.383 & -162.843 & -138.451 \\ \cline{2-5} 
+     & Max & 1352.56 & 1892.73 & 2886.78 \\ \cline{2-5} 
+     & Average & 616.212 & 991.266 & 1430.33 \\ \cline{2-5} 
+     & Min time & 167ms & 261ms & 621ms \\ \cline{2-5} 
+     & Max time & 205ms & 347ms & 780ms \\ \cline{2-5} 
+     & Average time & 182ms & 304ms & 689ms \\ \hline
+    \end{tabular}
+  %\end{table}
+  \caption{Schwefel's function results}
+\end{figure}
+
+\begin{figure}[!h]
+  %\begin{table}[]
+    \begin{tabular}{|l|l|l|l|l|}
+    \hline
+    \multicolumn{1}{|c|}{Method} & \multicolumn{1}{c|}{Dimension n} & \multicolumn{1}{c|}{5} & \multicolumn{1}{c|}{10} & \multicolumn{1}{c|}{30} \\ \hline
+    \multirow{6}{*}{\begin{tabular}[c]{@{}l@{}}Iterated Hillclimbing\\ Best improvement\end{tabular}} & Min & -4.49515 & -8.70385 & -19.9845 \\ \cline{2-5} 
+     & Max & 0 & 0 & 0 \\ \cline{2-5} 
+     & Average & -3.86747 & -7.79965 & -17.7059 \\ \cline{2-5} 
+     & Min time & 1897ms & 4589ms & 21336ms \\ \cline{2-5} 
+     & Max time & 3301ms & 10151ms & 36197ms \\ \cline{2-5} 
+     & Average time & 2648ms & 7392ms & 28380ms \\ \hline
+    \multirow{6}{*}{\begin{tabular}[c]{@{}l@{}}Iterated Hillclimbing\\ First improvement\end{tabular}} & Min & -4.63334 & -8.26517 & -18.3539 \\ \cline{2-5} 
+     & Max & 0 & 0 & 0 \\ \cline{2-5} 
+     & Average & -3.68547 & -7.07535 & -15.0016 \\ \cline{2-5} 
+     & Min time & 1116ms & 2870ms & 15072ms \\ \cline{2-5} 
+     & Max time & 1956ms & 6286ms & 28352ms \\ \cline{2-5} 
+     & Average time & 1577ms & 4297ms & 20305ms \\ \hline
+    \multirow{6}{*}{Simulated Annealing} & Min & -0.908522 & -1.13222 & -4.60035 \\ \cline{2-5} 
+     & Max & 0 & 0 & 0 \\ \cline{2-5} 
+     & Average & -0.282703 & -0.313583 & -1.80264 \\ \cline{2-5} 
+     & Min time & 88ms & 145ms & 234ms \\ \cline{2-5} 
+     & Max time & 121ms & 187ms & 295ms \\ \cline{2-5} 
+     & Average time & 109ms & 163ms & 263ms \\ \hline
+    \end{tabular}
+  %\end{table}
+  \caption{Michalewicz's function results}
+\end{figure}
+
+\newpage
+
+\section{Conclusions}
+Iterated Hillclimbing using the best improvement approach is by far the most efficient method of all.
+The values it produces are the closest to the actual global minima of the functions, and the time it needs to accomplish that are relatively good.
+
+The first improvement approach comes very close to being as precise and its times are faster, however the gap becomes too large as we scale the dimension upwards.
+
+Simulate Annealing is, as observed, the fastest, but the values it produces are too distant from our expectation. Although it comes relatively close considering the time it needs to reach those values.
+
+However, one thing they all share is the struggle of searching through a wide function domain, as seen with Schwefel's function. Hillclimbing takes a lot of time to produce even one solution while Simulated Annealing is way off mark with its result.
+
+\vspace{5mm}
+
+Heuristics show high capabilities of tackling with problems that classical methods are not fit to undertake.
+A deterministic approach to the task at hand would have a hard time even producing a result in a reasonable amount of time, while heuristics allow us to explore the realm of possible solutions using approximations.
+
+\begin{thebibliography}{9}
+
+\bibitem{functions}
+  Site with details of the functions used \\
+  \url{http://www.geatbx.com/docu/fcnindex-01.html#P150_6749}
+
+\bibitem{pmihaela}
+  Course site with the algorithms' details \\
+  \url{https://profs.info.uaic.ro/~pmihaela/GA/laborator2.html}
+
+\bibitem{github}
+  Github repository for the project \\
+  \url{https://github.com/Nenma/ga-hw1}
+
+\bibitem{heuristic}
+  Wikipedia page for heuristic \\
+  \url{https://en.wikipedia.org/wiki/Heuristic_(computer_science)}
+  
+\bibitem{tutorial}
+  Simple Latex tutorial I used \\
+  \url{http://www.docs.is.ed.ac.uk/skills/documents/3722/3722-2014.pdf}
+
+\end{thebibliography}  
+\end{document}
